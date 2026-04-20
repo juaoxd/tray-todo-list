@@ -4,6 +4,11 @@ import { createTray } from './tray'
 import { createPopup } from './window'
 import { registerIpcHandlers } from './ipc-handlers'
 
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+}
+
 // Hide dock icon on macOS
 if (process.platform === 'darwin') {
   app.dock.hide()

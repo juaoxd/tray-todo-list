@@ -26,8 +26,7 @@ export function createPopup(): BrowserWindow {
     resizable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    transparent: false,
-    backgroundColor: '#ffffff',
+    transparent: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,

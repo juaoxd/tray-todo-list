@@ -1,4 +1,4 @@
-import { Tray, nativeImage } from 'electron'
+import { Tray, nativeImage, Menu, app } from 'electron'
 import { join } from 'path'
 import { togglePopup } from './window'
 
@@ -17,6 +17,13 @@ export function createTray(): Tray {
     if (tray) {
       togglePopup(tray.getBounds())
     }
+  })
+
+  tray.on('right-click', () => {
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Fechar', click: () => app.quit() }
+    ])
+    tray?.popUpContextMenu(contextMenu)
   })
 
   return tray

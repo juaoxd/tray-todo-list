@@ -26,6 +26,7 @@ function AppContent() {
       background: 'white',
       borderRadius: 12,
       overflow: 'hidden',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
     }}>
       <Layout />
       {/* Settings toggle */}
