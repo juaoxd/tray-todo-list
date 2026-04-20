@@ -88,7 +88,7 @@ export function LayoutCompact() {
       </div>
 
       {/* Task list */}
-      <div style={{ padding: '6px 6px 4px', maxHeight: 180, overflowY: 'auto' }}>
+      <div style={{ padding: '6px 6px 0', maxHeight: 180, overflowY: 'auto' }}>
         {filteredTasks.length === 0 && (
           <div style={{ textAlign: 'center', padding: 16, color: 'oklch(0.72 0.01 250)', fontSize: 12 }}>
             Nenhuma tarefa ✓
@@ -97,9 +97,9 @@ export function LayoutCompact() {
         {filteredTasks.map(t => (
           <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} accent={accent} />
         ))}
-        <div style={{ padding: '0 2px' }}>
-          <AddTaskRow onAdd={addTask} accent={accent} selectedDate={selectedDate} />
-        </div>
+      </div>
+      <div style={{ padding: '0 8px 4px' }}>
+        <AddTaskRow onAdd={addTask} accent={accent} selectedDate={selectedDate} />
       </div>
 
       {/* Quick note */}

@@ -83,13 +83,13 @@ export function LayoutFocus() {
       )}
 
       {/* Tasks */}
-      <div style={{ maxHeight: 200, overflowY: 'auto', padding: '6px 6px 4px' }}>
+      <div style={{ maxHeight: 200, overflowY: 'auto', padding: '6px 6px 0' }}>
         {todayTasks.map(t => (
           <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} accent={accent} />
         ))}
-        <div style={{ padding: '0 2px' }}>
-          <AddTaskRow onAdd={addTask} accent={accent} selectedDate={todayKey()} />
-        </div>
+      </div>
+      <div style={{ padding: '0 8px 4px' }}>
+        <AddTaskRow onAdd={addTask} accent={accent} selectedDate={todayKey()} />
       </div>
 
       {/* Quick note */}

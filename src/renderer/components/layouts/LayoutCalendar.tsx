@@ -54,7 +54,7 @@ export function LayoutCalendar() {
             {selectedTasks.length} tarefa{selectedTasks.length !== 1 ? 's' : ''}
           </span>
         </div>
-        <div style={{ maxHeight: 150, overflowY: 'auto', padding: '0 6px 4px' }}>
+        <div style={{ maxHeight: 150, overflowY: 'auto', padding: '0 6px 0' }}>
           {selectedTasks.length === 0 && (
             <div style={{ textAlign: 'center', padding: 12, color: 'oklch(0.72 0.01 250)', fontSize: 12 }}>
               Livre — nada agendado
@@ -63,9 +63,9 @@ export function LayoutCalendar() {
           {selectedTasks.map(t => (
             <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} accent={accent} />
           ))}
-          <div style={{ padding: '0 2px' }}>
-            <AddTaskRow onAdd={addTask} accent={accent} selectedDate={selectedDate} />
-          </div>
+        </div>
+        <div style={{ padding: '0 8px 4px' }}>
+          <AddTaskRow onAdd={addTask} accent={accent} selectedDate={selectedDate} />
         </div>
       </div>
 
