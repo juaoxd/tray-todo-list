@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT OR IGNORE INTO notes (id, content) VALUES (1, '');
-INSERT OR IGNORE INTO settings (id, layout, accent, show_quick_note, font_size, notifications_enabled)
-  VALUES (1, 'focus', '#5B7CF6', 1, 13, 1);
+INSERT OR IGNORE INTO settings (id, layout, accent, show_quick_note, font_size)
+  VALUES (1, 'focus', '#5B7CF6', 1, 13);
 `
 
 function getDbPath(): string {
