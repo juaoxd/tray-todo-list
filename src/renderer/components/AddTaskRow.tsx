@@ -18,7 +18,7 @@ export function AddTaskRow({ onAdd, accent, selectedDate }: Props) {
 
   const submit = () => {
     if (!text.trim()) return
-    onAdd({ text: text.trim(), time, date: selectedDate, done: false, priority: 'med' })
+    onAdd({ text: text.trim(), time, date: time ? selectedDate : '', done: false, priority: 'med' })
     setText('')
     setTime('')
     setOpen(false)

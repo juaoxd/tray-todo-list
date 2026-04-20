@@ -4,7 +4,7 @@ import { TaskItem } from '../TaskItem'
 import { AddTaskRow } from '../AddTaskRow'
 import { MiniCalendar } from '../MiniCalendar'
 import { QuickNote } from '../QuickNote'
-import { isToday, todayKey, fmtTodayHeader } from '../../lib/dates'
+import { fmtTodayHeader } from '../../lib/dates'
 
 export function LayoutFocus() {
   const { tasks, settings, toggleTask, deleteTask, addTask } = useApp()
@@ -13,12 +13,18 @@ export function LayoutFocus() {
   const [calOpen, setCalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState(todayKey())
 
-  const todayTasks = tasks.filter(t => isToday(t.date)).sort((a, b) => a.time.localeCompare(b.time))
-  const done = todayTasks.filter(t => t.done).length
-  const total = todayTasks.length
+  const displayTasks = tasks
+    .filter(t => t.date === selectedDate || (t.date === '' && t.time === ''))
+    .sort((a, b) => {
+      if (!a.time && b.time) return 1
+      if (a.time && !b.time) return -1
+      return a.time.localeCompare(b.time)
+    })
+  const done = displayTasks.filter(t => t.done).length
+  const total = displayTasks.length
   const pct = total ? Math.round(done / total * 100) : 0
 
-  const nextTask = todayTasks.find(t => !t.done && t.time)
+  const nextTask = displayTasks.find(t => !t.done && t.time)
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize }}>
@@ -54,7 +60,6 @@ export function LayoutFocus() {
               <rect x="1" y="2" width="11" height="10" rx="1.5" />
               <path d="M4 1v2M9 1v2M1 5h11" />
             </svg>
-            Cal
           </button>
         </div>
 
@@ -84,12 +89,12 @@ export function LayoutFocus() {
 
       {/* Tasks */}
       <div style={{ maxHeight: 200, overflowY: 'auto', padding: '6px 6px 0' }}>
-        {todayTasks.map(t => (
+        {displayTasks.map(t => (
           <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} accent={accent} />
         ))}
       </div>
       <div style={{ padding: '0 8px 4px' }}>
-        <AddTaskRow onAdd={addTask} accent={accent} selectedDate={todayKey()} />
+        <AddTaskRow onAdd={addTask} accent={accent} selectedDate={selectedDate} />
       </div>
 
       {/* Quick note */}

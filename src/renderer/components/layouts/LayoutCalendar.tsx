@@ -13,8 +13,12 @@ export function LayoutCalendar() {
   const [selectedDate, setSelectedDate] = useState(todayKey())
 
   const selectedTasks = tasks
-    .filter(t => t.date === selectedDate)
-    .sort((a, b) => a.time.localeCompare(b.time))
+    .filter(t => t.date === selectedDate || (t.date === '' && t.time === ''))
+    .sort((a, b) => {
+      if (!a.time && b.time) return 1
+      if (a.time && !b.time) return -1
+      return a.time.localeCompare(b.time)
+    })
   const pendingCount = tasks.filter(t => isToday(t.date) && !t.done).length
 
   const selLabel = isToday(selectedDate) ? 'Hoje' : fmtDate(selectedDate)

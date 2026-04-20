@@ -15,9 +15,16 @@ export function LayoutCompact() {
   const [selectedDate, setSelectedDate] = useState(todayKey())
 
   const todayTasks = tasks.filter(t => isToday(t.date))
-  const upcomingTasks = tasks.filter(t => !isToday(t.date)).sort((a, b) => a.date.localeCompare(b.date))
+  const upcomingTasks = tasks.filter(t => t.date !== '' && !isToday(t.date)).sort((a, b) => a.date.localeCompare(b.date))
   const todayPending = todayTasks.filter(t => !t.done).length
-  const filteredTasks = tab === 'today' ? todayTasks : upcomingTasks
+  const calTasks = tasks
+    .filter(t => t.date === selectedDate || (t.date === '' && t.time === ''))
+    .sort((a, b) => {
+      if (!a.time && b.time) return 1
+      if (a.time && !b.time) return -1
+      return a.time.localeCompare(b.time)
+    })
+  const filteredTasks = calOpen ? calTasks : (tab === 'today' ? todayTasks : upcomingTasks)
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize }}>
@@ -45,7 +52,6 @@ export function LayoutCompact() {
               <rect x="1" y="2" width="11" height="10" rx="1.5" />
               <path d="M4 1v2M9 1v2M1 5h11" />
             </svg>
-            Cal
           </button>
         </div>
       </div>
