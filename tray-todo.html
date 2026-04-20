@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tray Todo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: oklch(0.92 0.01 250);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 52px;
+  }
+  /* Simulates the desktop/menubar context */
+  .desktop-bg {
+    position: fixed; inset: 0;
+    background: linear-gradient(160deg, oklch(0.88 0.02 240) 0%, oklch(0.84 0.03 260) 100%);
+    z-index: 0;
+  }
+  .menubar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 28px;
+    background: oklch(0.20 0.01 250 / 0.85);
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 16px;
+    z-index: 100;
+    gap: 16px;
+  }
+  .menubar-item {
+    font-size: 12px;
+    color: oklch(0.95 0.005 250);
+    font-family: 'DM Sans', sans-serif;
+    opacity: 0.8;
+  }
+  .tray-icon {
+    display: flex; align-items: center; gap: 5px;
+    cursor: pointer;
+    padding: 3px 7px;
+    border-radius: 5px;
+    transition: background 0.15s;
+  }
+  .tray-icon:hover { background: oklch(1 0 0 / 0.12); }
+  .tray-icon.active { background: oklch(1 0 0 / 0.18); }
+  .tray-icon svg { width: 14px; height: 14px; }
+  .popup-wrapper {
+    position: fixed;
+    top: 34px;
+    right: 16px;
+    z-index: 200;
+    transform-origin: top right;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
+  }
+  .popup-wrapper.hidden {
+    transform: scale(0.92) translateY(-6px);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .popup-wrapper.visible {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  /* Tweaks panel */
+  .tweaks-panel {
+    position: fixed; top: 34px; right: 362px;
+    background: white;
+    border: 1px solid oklch(0.88 0.01 250);
+    border-radius: 12px;
+    padding: 16px;
+    width: 220px;
+    box-shadow: 0 4px 24px oklch(0 0 0 / 0.12);
+    z-index: 1000;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+  }
+  .tweaks-panel h3 {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: oklch(0.55 0.01 250);
+    margin-bottom: 12px;
+  }
+  .tweak-row { margin-bottom: 10px; }
+  .tweak-row label { display: block; font-size: 11px; color: oklch(0.45 0.01 250); margin-bottom: 4px; font-weight: 500; }
+  .tweak-row select, .tweak-row input[type=range] {
+    width: 100%; font-size: 12px; padding: 4px 6px;
+    border: 1px solid oklch(0.88 0.01 250); border-radius: 6px;
+    font-family: 'DM Sans', sans-serif; background: white; color: oklch(0.2 0.01 250);
+    outline: none; cursor: pointer;
+  }
+  .radio-group { display: flex; gap: 4px; flex-wrap: wrap; }
+  .radio-pill {
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    border: 1px solid oklch(0.88 0.01 250); cursor: pointer;
+    background: white; color: oklch(0.45 0.01 250); transition: all 0.15s;
+  }
+  .radio-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+</style>
+</head>
+<body>
+
+<div class="desktop-bg"></div>
+<div class="menubar">
+  <span class="menubar-item" id="clock-display">20 Abr  14:32</span>
+  <div class="tray-icon" id="tray-btn">
+    <svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round">
+      <rect x="1" y="2" width="12" height="10" rx="1.5"/>
+      <path d="M4 6h6M4 8.5h4"/>
+      <circle cx="3" cy="6" r="0.7" fill="white" stroke="none"/>
+      <circle cx="3" cy="8.5" r="0.7" fill="white" stroke="none"/>
+    </svg>
+    <span class="menubar-item" style="font-size:11px;opacity:1;">●</span>
+  </div>
+</div>
+
+<div class="popup-wrapper hidden" id="popup-wrapper">
+  <div id="react-root"></div>
+</div>
+
+<div id="tweaks-root"></div>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "layout": "focus",
+  "accent": "#5B7CF6",
+  "showQuickNote": true,
+  "fontSize": 13
+}/*EDITMODE-END*/;
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+const TODAY = new Date(2026, 3, 20); // April 20, 2026
+const DAYS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+const INIT_TASKS = [
+  { id:1, text:'Reunião com time de design', done:false, date:'2026-04-20', time:'10:00', priority:'high' },
+  { id:2, text:'Revisar PRD do produto', done:true,  date:'2026-04-20', time:'14:00', priority:'med' },
+  { id:3, text:'Call com cliente', done:false, date:'2026-04-20', time:'16:30', priority:'high' },
+  { id:4, text:'Enviar proposta atualizada', done:false, date:'2026-04-21', time:'09:00', priority:'med' },
+  { id:5, text:'Comprar passagens viagem', done:false, date:'2026-04-22', time:'', priority:'low' },
+  { id:6, text:'Revisão semanal', done:false, date:'2026-04-24', time:'11:00', priority:'med' },
+];
+
+// ─── Tiny helpers ─────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  const [y,m,day] = d.split('-');
+  const dt = new Date(+y, +m-1, +day);
+  return dt.toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+}
+function isToday(d) {
+  const [y,m,day] = d.split('-');
+  const t = TODAY;
+  return +y===t.getFullYear() && +m-1===t.getMonth() && +day===t.getDate();
+}
+function getPriorityColor(p) {
+  if(p==='high') return 'oklch(0.60 0.20 25)';
+  if(p==='med')  return 'oklch(0.65 0.18 70)';
+  return 'oklch(0.62 0.14 155)';
+}
+
+// ─── Mini Calendar ────────────────────────────────────────────────────────────
+function MiniCalendar({ tasks, selectedDate, onSelect, accent }) {
+  const [month, setMonth] = React.useState(TODAY.getMonth());
+  const [year, setYear]   = React.useState(TODAY.getFullYear());
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const taskDates = new Set(tasks.map(t=>t.date));
+
+  const cells = [];
+  for(let i=0;i<firstDay;i++) cells.push(null);
+  for(let d=1;d<=daysInMonth;d++) cells.push(d);
+
+  const isSelected = (d) => {
+    if(!d||!selectedDate) return false;
+    const s = selectedDate.split('-');
+    return +s[0]===year && +s[1]-1===month && +s[2]===d;
+  };
+  const isTodayCell = (d) => {
+    if(!d) return false;
+    return year===TODAY.getFullYear() && month===TODAY.getMonth() && d===TODAY.getDate();
+  };
+  const hasTasks = (d) => {
+    if(!d) return false;
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return taskDates.has(key);
+  };
+  const select = (d) => {
+    if(!d) return;
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    onSelect(key);
+  };
+
+  return (
+    <div style={{userSelect:'none'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+        <button onClick={()=>{
+          if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);
+        }} style={calNavBtn}>&lsaquo;</button>
+        <span style={{fontSize:12,fontWeight:600,color:'oklch(0.25 0.01 250)'}}>
+          {MONTHS_PT[month]} {year}
+        </span>
+        <button onClick={()=>{
+          if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);
+        }} style={calNavBtn}>&rsaquo;</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'2px',marginBottom:4}}>
+        {DAYS_PT.map(d=>(
+          <div key={d} style={{textAlign:'center',fontSize:10,fontWeight:600,
+            color:'oklch(0.65 0.01 250)',padding:'0 0 2px',fontFamily:'DM Mono, monospace'}}>{d}</div>
+        ))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'2px'}}>
+        {cells.map((d,i)=>{
+          const sel = isSelected(d);
+          const tod = isTodayCell(d);
+          const has = hasTasks(d);
+          return (
+            <div key={i} onClick={()=>select(d)} style={{
+              textAlign:'center',
+              width:28, height:28, borderRadius:7,
+              display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+              fontSize:11, fontFamily:'DM Mono, monospace',
+              fontWeight: tod?600:400,
+              color: sel?'white' : tod?accent : d?'oklch(0.25 0.01 250)':'transparent',
+              background: sel?accent : tod?`${accent}18`:'transparent',
+              cursor: d?'pointer':'default',
+              position:'relative',
+              transition:'background 0.12s',
+            }}>
+              {d||''}
+              {has&&!sel&&<span style={{position:'absolute',bottom:2,width:3,height:3,borderRadius:'50%',
+                background:sel?'white':accent,opacity:0.7}}/>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const calNavBtn = {
+  background:'none',border:'none',cursor:'pointer',
+  fontSize:16,color:'oklch(0.50 0.01 250)',padding:'0 4px',
+  borderRadius:4,lineHeight:1,transition:'color 0.1s',
+};
+
+// ─── Task Item ────────────────────────────────────────────────────────────────
+function TaskItem({ task, onToggle, onDelete, accent, compact }) {
+  const [hov, setHov] = React.useState(false);
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{
+        display:'flex',alignItems:'flex-start',gap:8,
+        padding: compact?'6px 8px':'8px 10px',
+        borderRadius:8, background: hov?'oklch(0.97 0.005 250)':'transparent',
+        transition:'background 0.12s', cursor:'default',
+      }}>
+      <button onClick={()=>onToggle(task.id)} style={{
+        width:16,height:16,borderRadius:4.5,border:`1.5px solid`,flexShrink:0,marginTop:1,
+        borderColor: task.done?accent:'oklch(0.78 0.01 250)',
+        background: task.done?accent:'transparent',
+        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+        transition:'all 0.12s',
+      }}>
+        {task.done&&<svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+          <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>}
+      </button>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{
+          fontSize:12.5,fontWeight:task.done?400:500,
+          color: task.done?'oklch(0.68 0.01 250)':'oklch(0.20 0.01 250)',
+          textDecoration: task.done?'line-through':'none',
+          lineHeight:1.3,
+          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+        }}>{task.text}</div>
+        {task.time&&<div style={{
+          fontSize:10.5,fontFamily:'DM Mono, monospace',
+          color:'oklch(0.65 0.01 250)',marginTop:1,
+        }}>{task.time}</div>}
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+        <div style={{width:5,height:5,borderRadius:'50%',background:getPriorityColor(task.priority),opacity:0.8,marginTop:4}}/>
+        {hov&&<button onClick={()=>onDelete(task.id)} style={{
+          background:'none',border:'none',cursor:'pointer',padding:1,
+          color:'oklch(0.70 0.01 250)',fontSize:13,lineHeight:1,borderRadius:3,
+          transition:'color 0.1s',
+        }}>×</button>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Add Task Row ─────────────────────────────────────────────────────────────
+function AddTaskRow({ onAdd, accent, selectedDate }) {
+  const [open, setOpen] = React.useState(false);
+  const [text, setText] = React.useState('');
+  const [time, setTime] = React.useState('');
+  const inputRef = React.useRef();
+
+  React.useEffect(()=>{ if(open) inputRef.current?.focus(); },[open]);
+
+  const submit = () => {
+    if(!text.trim()) return;
+    onAdd({ text:text.trim(), time, date: selectedDate||'2026-04-20', done:false, priority:'med' });
+    setText(''); setTime(''); setOpen(false);
+  };
+
+  if(!open) return (
+    <button onClick={()=>setOpen(true)} style={{
+      display:'flex',alignItems:'center',gap:6,
+      width:'100%',background:'none',border:'none',cursor:'pointer',
+      padding:'6px 8px',borderRadius:8,
+      color:'oklch(0.60 0.01 250)',fontSize:12,
+      transition:'background 0.12s, color 0.12s',
+    }} onMouseEnter={e=>{e.currentTarget.style.background='oklch(0.97 0.005 250)';e.currentTarget.style.color=accent;}}
+       onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='oklch(0.60 0.01 250)';}}>
+      <span style={{fontSize:14,lineHeight:1}}>+</span> Nova tarefa
+    </button>
+  );
+
+  return (
+    <div style={{background:'oklch(0.97 0.005 250)',borderRadius:8,padding:'8px 10px',display:'flex',flexDirection:'column',gap:6}}>
+      <input ref={inputRef} value={text} onChange={e=>setText(e.target.value)}
+        onKeyDown={e=>{if(e.key==='Enter')submit();if(e.key==='Escape'){setOpen(false);setText('');setTime('');}}}
+        placeholder="O que precisa fazer?"
+        style={{
+          border:'none',background:'transparent',outline:'none',
+          fontSize:12.5,fontFamily:'DM Sans, sans-serif',color:'oklch(0.20 0.01 250)',
+          width:'100%',
+        }}/>
+      <div style={{display:'flex',gap:6,alignItems:'center'}}>
+        <input type="time" value={time} onChange={e=>setTime(e.target.value)}
+          style={{
+            border:'1px solid oklch(0.88 0.01 250)',borderRadius:5,padding:'3px 6px',
+            fontSize:11,fontFamily:'DM Mono, monospace',background:'white',
+            color:'oklch(0.35 0.01 250)',outline:'none',cursor:'pointer',
+          }}/>
+        <button onClick={submit} style={{
+          background:accent,border:'none',borderRadius:5,
+          color:'white',fontSize:11,fontWeight:600,padding:'4px 10px',cursor:'pointer',
+          marginLeft:'auto',
+        }}>Adicionar</button>
+        <button onClick={()=>{setOpen(false);setText('');setTime('');}} style={{
+          background:'none',border:'none',color:'oklch(0.65 0.01 250)',
+          fontSize:11,cursor:'pointer',
+        }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quick Note ───────────────────────────────────────────────────────────────
+function QuickNote({ accent }) {
+  const [note, setNote] = React.useState(localStorage.getItem('tray-note')||'');
+  const save = (v) => { setNote(v); localStorage.setItem('tray-note',v); };
+  return (
+    <div>
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',
+        color:'oklch(0.62 0.01 250)',marginBottom:6}}>Nota rápida</div>
+      <textarea value={note} onChange={e=>save(e.target.value)}
+        placeholder="Rascunho, ideia, link..."
+        style={{
+          width:'100%',minHeight:58,resize:'none',
+          border:'1px solid oklch(0.90 0.01 250)',borderRadius:8,
+          padding:'8px 10px',fontSize:12,fontFamily:'DM Sans, sans-serif',
+          color:'oklch(0.25 0.01 250)',background:'oklch(0.985 0.005 250)',
+          outline:'none',lineHeight:1.5,
+          transition:'border-color 0.15s',
+        }}
+        onFocus={e=>e.target.style.borderColor=accent}
+        onBlur={e=>e.target.style.borderColor='oklch(0.90 0.01 250)'}
+      />
+    </div>
+  );
+}
+
+// ─── Notification badge ───────────────────────────────────────────────────────
+function Badge({count, accent}) {
+  if(!count) return null;
+  return <span style={{
+    background:accent,color:'white',borderRadius:20,
+    fontSize:9,fontWeight:700,padding:'1px 5px',marginLeft:4,
+    fontFamily:'DM Mono, monospace',
+  }}>{count}</span>;
+}
+
+// ─── LAYOUT: COMPACT ─────────────────────────────────────────────────────────
+function LayoutCompact({ tasks, setTasks, accent, showQuickNote, fontSize }) {
+  const [tab, setTab] = React.useState('today');
+  const [calOpen, setCalOpen] = React.useState(false);
+  const [selectedDate, setSelectedDate] = React.useState('2026-04-20');
+
+  const todayTasks = tasks.filter(t=>isToday(t.date));
+  const upcomingTasks = tasks.filter(t=>!isToday(t.date)).sort((a,b)=>a.date.localeCompare(b.date));
+  const todayPending = todayTasks.filter(t=>!t.done).length;
+
+  const toggle = id => setTasks(ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));
+  const del = id => setTasks(ts=>ts.filter(t=>t.id!==id));
+  const add = task => setTasks(ts=>[...ts,{...task,id:Date.now()}]);
+
+  const filteredTasks = tab==='today'?todayTasks : upcomingTasks;
+
+  return (
+    <div style={{fontFamily:'DM Sans, sans-serif', fontSize}}>
+      {/* Header */}
+      <div style={{padding:'14px 14px 10px',borderBottom:'1px solid oklch(0.92 0.01 250)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',
+              color:'oklch(0.62 0.01 250)'}}>Hoje</div>
+            <div style={{fontSize:18,fontWeight:600,color:'oklch(0.15 0.01 250)',lineHeight:1.2}}>
+              20 de Abril
+            </div>
+          </div>
+          <button onClick={()=>setCalOpen(o=>!o)} style={{
+            background: calOpen?`${accent}18`:'oklch(0.94 0.01 250)',
+            border:'none',borderRadius:8,padding:'6px 8px',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:4,fontSize:11,fontWeight:500,
+            color: calOpen?accent:'oklch(0.45 0.01 250)',transition:'all 0.15s',
+          }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <rect x="1" y="2" width="11" height="10" rx="1.5"/>
+              <path d="M4 1v2M9 1v2M1 5h11"/>
+            </svg>
+            Cal
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar (collapsible) */}
+      {calOpen&&<div style={{padding:'10px 14px',borderBottom:'1px solid oklch(0.92 0.01 250)'}}>
+        <MiniCalendar tasks={tasks} selectedDate={selectedDate} onSelect={setSelectedDate} accent={accent}/>
+      </div>}
+
+      {/* Tabs */}
+      <div style={{display:'flex',padding:'8px 14px 0',gap:4}}>
+        {[['today','Hoje',todayPending],['upcoming','Próximos',upcomingTasks.length]].map(([id,label,cnt])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{
+            padding:'4px 10px',borderRadius:20,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
+            background: tab===id?accent:'transparent',
+            color: tab===id?'white':'oklch(0.55 0.01 250)',
+            transition:'all 0.15s', display:'flex',alignItems:'center',gap:3,
+          }}>
+            {label}
+            {cnt>0&&<span style={{
+              background: tab===id?'white':'oklch(0.88 0.01 250)',
+              color: tab===id?accent:'oklch(0.50 0.01 250)',
+              borderRadius:10,fontSize:9,fontWeight:700,padding:'1px 5px',
+            }}>{cnt}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Task list */}
+      <div style={{padding:'6px 6px 4px',maxHeight:180,overflowY:'auto'}}>
+        {filteredTasks.length===0&&<div style={{
+          textAlign:'center',padding:'16px',color:'oklch(0.72 0.01 250)',fontSize:12,
+        }}>Nenhuma tarefa ✓</div>}
+        {filteredTasks.map(t=><TaskItem key={t.id} task={t} onToggle={toggle} onDelete={del} accent={accent} compact/>)}
+        <div style={{padding:'0 2px'}}>
+          <AddTaskRow onAdd={add} accent={accent} selectedDate={selectedDate}/>
+        </div>
+      </div>
+
+      {/* Quick note */}
+      {showQuickNote&&<div style={{padding:'8px 14px 12px',borderTop:'1px solid oklch(0.92 0.01 250)',marginTop:4}}>
+        <QuickNote accent={accent}/>
+      </div>}
+    </div>
+  );
+}
+
+// ─── LAYOUT: CALENDAR ────────────────────────────────────────────────────────
+function LayoutCalendar({ tasks, setTasks, accent, showQuickNote, fontSize }) {
+  const [selectedDate, setSelectedDate] = React.useState('2026-04-20');
+
+  const selectedTasks = tasks.filter(t=>t.date===selectedDate)
+    .sort((a,b)=>a.time.localeCompare(b.time));
+  const pendingCount = tasks.filter(t=>isToday(t.date)&&!t.done).length;
+
+  const toggle = id => setTasks(ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));
+  const del = id => setTasks(ts=>ts.filter(t=>t.id!==id));
+  const add = task => setTasks(ts=>[...ts,{...task,id:Date.now()}]);
+
+  const selLabel = isToday(selectedDate)
+    ? 'Hoje'
+    : fmtDate(selectedDate);
+
+  return (
+    <div style={{fontFamily:'DM Sans, sans-serif', fontSize}}>
+      {/* Header */}
+      <div style={{padding:'12px 14px 10px',borderBottom:'1px solid oklch(0.92 0.01 250)',
+        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{fontSize:14,fontWeight:600,color:'oklch(0.15 0.01 250)'}}>
+          Agenda
+        </div>
+        {pendingCount>0&&<span style={{
+          background:`${accent}18`,color:accent,
+          borderRadius:6,fontSize:10,fontWeight:600,padding:'2px 7px',
+        }}>{pendingCount} pendente{pendingCount>1?'s':''} hoje</span>}
+      </div>
+
+      {/* Calendar */}
+      <div style={{padding:'12px 14px',borderBottom:'1px solid oklch(0.92 0.01 250)'}}>
+        <MiniCalendar tasks={tasks} selectedDate={selectedDate} onSelect={setSelectedDate} accent={accent}/>
+      </div>
+
+      {/* Selected day tasks */}
+      <div>
+        <div style={{padding:'8px 14px 4px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',
+            color:'oklch(0.55 0.01 250)'}}>{selLabel}</div>
+          <span style={{fontSize:10,color:'oklch(0.68 0.01 250)'}}>{selectedTasks.length} tarefa{selectedTasks.length!==1?'s':''}</span>
+        </div>
+        <div style={{maxHeight:150,overflowY:'auto',padding:'0 6px 4px'}}>
+          {selectedTasks.length===0&&<div style={{
+            textAlign:'center',padding:'12px',color:'oklch(0.72 0.01 250)',fontSize:12,
+          }}>Livre — nada agendado</div>}
+          {selectedTasks.map(t=><TaskItem key={t.id} task={t} onToggle={toggle} onDelete={del} accent={accent} compact/>)}
+          <div style={{padding:'0 2px'}}>
+            <AddTaskRow onAdd={add} accent={accent} selectedDate={selectedDate}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick note */}
+      {showQuickNote&&<div style={{padding:'8px 14px 12px',borderTop:'1px solid oklch(0.92 0.01 250)'}}>
+        <QuickNote accent={accent}/>
+      </div>}
+    </div>
+  );
+}
+
+// ─── LAYOUT: FOCUS ───────────────────────────────────────────────────────────
+function LayoutFocus({ tasks, setTasks, accent, showQuickNote, fontSize }) {
+  const [calOpen, setCalOpen] = React.useState(false);
+  const [selectedDate, setSelectedDate] = React.useState('2026-04-20');
+
+  const todayTasks = tasks.filter(t=>isToday(t.date)).sort((a,b)=>a.time.localeCompare(b.time));
+  const done = todayTasks.filter(t=>t.done).length;
+  const total = todayTasks.length;
+  const pct = total?Math.round(done/total*100):0;
+
+  const toggle = id => setTasks(ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));
+  const del = id => setTasks(ts=>ts.filter(t=>t.id!==id));
+  const add = task => setTasks(ts=>[...ts,{...task,id:Date.now()}]);
+
+  const nextTask = todayTasks.find(t=>!t.done&&t.time);
+
+  return (
+    <div style={{fontFamily:'DM Sans, sans-serif', fontSize}}>
+      {/* Header */}
+      <div style={{padding:'14px 14px 12px',background:`${accent}08`}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',
+              color:accent,marginBottom:4}}>Segunda-feira, 20 Abr</div>
+            <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+              <span style={{fontSize:26,fontWeight:600,color:'oklch(0.15 0.01 250)',fontFamily:'DM Mono, monospace'}}>
+                {done}/{total}
+              </span>
+              <span style={{fontSize:12,color:'oklch(0.55 0.01 250)',fontWeight:400}}>tarefas concluídas</span>
+            </div>
+          </div>
+          <button onClick={()=>setCalOpen(o=>!o)} style={{
+            background: calOpen?`${accent}18`:'oklch(0.94 0.01 250)',
+            border:'none',borderRadius:8,padding:'6px 8px',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:4,fontSize:11,fontWeight:500,
+            color: calOpen?accent:'oklch(0.45 0.01 250)',transition:'all 0.15s',marginTop:2,
+          }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <rect x="1" y="2" width="11" height="10" rx="1.5"/>
+              <path d="M4 1v2M9 1v2M1 5h11"/>
+            </svg>
+            Cal
+          </button>
+        </div>
+        {/* Progress */}
+        <div style={{marginTop:8,height:3,background:'oklch(0.90 0.01 250)',borderRadius:2,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${pct}%`,background:accent,borderRadius:2,transition:'width 0.4s ease'}}/>
+        </div>
+        {nextTask&&<div style={{
+          marginTop:8,fontSize:10.5,color:'oklch(0.50 0.01 250)',
+          display:'flex',alignItems:'center',gap:4,
+        }}>
+          <span style={{fontFamily:'DM Mono, monospace',color:accent,fontWeight:500}}>{nextTask.time}</span>
+          <span>→</span>
+          <span style={{fontWeight:500,color:'oklch(0.30 0.01 250)'}}>{nextTask.text}</span>
+        </div>}
+      </div>
+
+      {/* Calendar (collapsible) */}
+      {calOpen&&<div style={{padding:'10px 14px',borderBottom:'1px solid oklch(0.92 0.01 250)'}}>
+        <MiniCalendar tasks={tasks} selectedDate={selectedDate} onSelect={setSelectedDate} accent={accent}/>
+      </div>}
+
+      {/* Tasks */}
+      <div style={{maxHeight:200,overflowY:'auto',padding:'6px 6px 4px'}}>
+        {todayTasks.map(t=><TaskItem key={t.id} task={t} onToggle={toggle} onDelete={del} accent={accent} compact/>)}
+        <div style={{padding:'0 2px'}}>
+          <AddTaskRow onAdd={add} accent={accent} selectedDate='2026-04-20'/>
+        </div>
+      </div>
+
+      {/* Quick note */}
+      {showQuickNote&&<div style={{padding:'8px 14px 12px',borderTop:'1px solid oklch(0.92 0.01 250)'}}>
+        <QuickNote accent={accent}/>
+      </div>}
+    </div>
+  );
+}
+
+// ─── Main Popup ───────────────────────────────────────────────────────────────
+function TrayPopup({ tweaks }) {
+  const [tasks, setTasks] = React.useState(INIT_TASKS);
+  const { layout, accent, showQuickNote, fontSize } = tweaks;
+
+  const layouts = { compact: LayoutCompact, calendar: LayoutCalendar, focus: LayoutFocus };
+  const Layout = layouts[layout] || LayoutCompact;
+
+  return (
+    <div style={{
+      width:330,
+      background:'white',
+      borderRadius:12,
+      boxShadow:'0 4px 6px oklch(0 0 0 / 0.06), 0 12px 40px oklch(0 0 0 / 0.14), 0 0 0 0.5px oklch(0 0 0 / 0.08)',
+      overflow:'hidden',
+      '--accent': accent,
+    }}>
+      <Layout tasks={tasks} setTasks={setTasks} accent={accent}
+        showQuickNote={showQuickNote} fontSize={fontSize}/>
+    </div>
+  );
+}
+
+// ─── Tweaks Panel ─────────────────────────────────────────────────────────────
+function TweaksPanel({ tweaks, setTweaks, visible }) {
+  if(!visible) return null;
+  const set = (k,v) => {
+    setTweaks(t=>({...t,[k]:v}));
+    window.parent.postMessage({type:'__edit_mode_set_keys',edits:{[k]:v}},'*');
+  };
+
+  const ACCENTS = ['#5B7CF6','#E05D5D','#2DAE74','#E07A2A','#9B5CE5','#D4954A'];
+
+  return (
+    <div className="tweaks-panel">
+      <h3>Tweaks</h3>
+      <div className="tweak-row">
+        <label>Layout</label>
+        <div className="radio-group">
+          {[['compact','Compact'],['calendar','Calendar'],['focus','Focus']].map(([v,l])=>(
+            <button key={v} className={`radio-pill${tweaks.layout===v?' active':''}`}
+              style={tweaks.layout===v?{background:tweaks.accent,borderColor:tweaks.accent}:{}}
+              onClick={()=>set('layout',v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="tweak-row">
+        <label>Cor de destaque</label>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+          {ACCENTS.map(c=>(
+            <div key={c} onClick={()=>set('accent',c)} style={{
+              width:20,height:20,borderRadius:'50%',background:c,cursor:'pointer',
+              outline: tweaks.accent===c?`2px solid ${c}`:'none',
+              outlineOffset:2,transition:'outline 0.12s',
+            }}/>
+          ))}
+        </div>
+      </div>
+      <div className="tweak-row">
+        <label>Nota rápida</label>
+        <div className="radio-group">
+          {[[true,'Visível'],[false,'Oculta']].map(([v,l])=>(
+            <button key={l} className={`radio-pill${tweaks.showQuickNote===v?' active':''}`}
+              style={tweaks.showQuickNote===v?{background:tweaks.accent,borderColor:tweaks.accent}:{}}
+              onClick={()=>set('showQuickNote',v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="tweak-row">
+        <label>Tamanho do texto — {tweaks.fontSize}px</label>
+        <input type="range" min={11} max={15} step={0.5} value={tweaks.fontSize}
+          onChange={e=>set('fontSize',parseFloat(e.target.value))}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── App Root ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+  const [tweaksVisible, setTweaksVisible] = React.useState(false);
+
+  React.useEffect(()=>{
+    const handler = (e) => {
+      if(e.data?.type==='__activate_edit_mode') setTweaksVisible(true);
+      if(e.data?.type==='__deactivate_edit_mode') setTweaksVisible(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({type:'__edit_mode_available'},'*');
+    return ()=>window.removeEventListener('message', handler);
+  },[]);
+
+  return (
+    <>
+      <TrayPopup tweaks={tweaks}/>
+      <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} visible={tweaksVisible}/>
+    </>
+  );
+}
+
+// ─── Mount ────────────────────────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('react-root')).render(<App/>);
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  const el = document.getElementById('clock-display');
+  if(el) el.textContent = `20 Abr  ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// Tray toggle
+const trayBtn = document.getElementById('tray-btn');
+const popupWrapper = document.getElementById('popup-wrapper');
+let open = true;
+trayBtn.addEventListener('click', () => {
+  open = !open;
+  trayBtn.classList.toggle('active', open);
+  popupWrapper.classList.toggle('visible', open);
+  popupWrapper.classList.toggle('hidden', !open);
+});
+// open on load
+trayBtn.classList.add('active');
+popupWrapper.classList.add('visible');
+popupWrapper.classList.remove('hidden');
+</script>
+
+
+</body>
+</html>
