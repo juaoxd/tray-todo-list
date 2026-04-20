@@ -4,7 +4,7 @@ import { TaskItem } from '../TaskItem'
 import { AddTaskRow } from '../AddTaskRow'
 import { MiniCalendar } from '../MiniCalendar'
 import { QuickNote } from '../QuickNote'
-import { fmtTodayHeader } from '../../lib/dates'
+import { todayKey, fmtTodayHeader } from '../../lib/dates'
 
 export function LayoutFocus() {
   const { tasks, settings, toggleTask, deleteTask, addTask } = useApp()
