@@ -12,6 +12,7 @@ export interface Settings {
   accent: string
   showQuickNote: boolean
   fontSize: number
+  notificationsEnabled: boolean
 }
 
 export interface ElectronAPI {

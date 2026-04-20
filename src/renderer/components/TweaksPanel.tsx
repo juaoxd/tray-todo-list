@@ -120,6 +120,33 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
         </div>
       </div>
 
+      {/* Notifications toggle */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ display: 'block', fontSize: 11, color: 'oklch(0.45 0.01 250)', marginBottom: 4, fontWeight: 500 }}>
+          Notificações
+        </label>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {([true, false] as const).map(v => (
+            <button
+              key={String(v)}
+              onClick={() => set('notificationsEnabled', v)}
+              style={{
+                padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500,
+                border: '1px solid',
+                borderColor: settings.notificationsEnabled === v ? settings.accent : 'oklch(0.88 0.01 250)',
+                cursor: 'pointer',
+                background: settings.notificationsEnabled === v ? settings.accent : 'white',
+                color: settings.notificationsEnabled === v ? 'white' : 'oklch(0.45 0.01 250)',
+                transition: 'all 0.15s',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              {v ? 'Ativadas' : 'Desativadas'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Font size */}
       <div>
         <label style={{ display: 'block', fontSize: 11, color: 'oklch(0.45 0.01 250)', marginBottom: 4, fontWeight: 500 }}>

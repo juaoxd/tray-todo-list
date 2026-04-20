@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS: Settings = {
   layout: 'focus',
   accent: '#5B7CF6',
   showQuickNote: true,
-  fontSize: 13
+  fontSize: 13,
+  notificationsEnabled: true
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {

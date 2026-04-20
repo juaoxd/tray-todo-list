@@ -23,16 +23,17 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 
 CREATE TABLE IF NOT EXISTS settings (
-  id              INTEGER PRIMARY KEY CHECK (id = 1),
-  layout          TEXT NOT NULL DEFAULT 'focus',
-  accent          TEXT NOT NULL DEFAULT '#5B7CF6',
-  show_quick_note INTEGER NOT NULL DEFAULT 1,
-  font_size       REAL NOT NULL DEFAULT 13
+  id                    INTEGER PRIMARY KEY CHECK (id = 1),
+  layout                TEXT NOT NULL DEFAULT 'focus',
+  accent                TEXT NOT NULL DEFAULT '#5B7CF6',
+  show_quick_note       INTEGER NOT NULL DEFAULT 1,
+  font_size             REAL NOT NULL DEFAULT 13,
+  notifications_enabled INTEGER NOT NULL DEFAULT 1
 );
 
 INSERT OR IGNORE INTO notes (id, content) VALUES (1, '');
-INSERT OR IGNORE INTO settings (id, layout, accent, show_quick_note, font_size)
-  VALUES (1, 'focus', '#5B7CF6', 1, 13);
+INSERT OR IGNORE INTO settings (id, layout, accent, show_quick_note, font_size, notifications_enabled)
+  VALUES (1, 'focus', '#5B7CF6', 1, 13, 1);
 `
 
 function getDbPath(): string {
@@ -56,6 +57,12 @@ export async function initDatabase(): Promise<void> {
   }
 
   db.run(SCHEMA)
+  // Migration: add notifications_enabled if missing (existing databases)
+  try {
+    db.run('ALTER TABLE settings ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1')
+  } catch {
+    // Column already exists
+  }
   save()
 }
 
@@ -142,19 +149,21 @@ export interface SettingsRow {
   accent: string
   show_quick_note: number
   font_size: number
+  notifications_enabled: number
 }
 
 export function getSettings(): SettingsRow {
-  const result = db.exec('SELECT layout, accent, show_quick_note, font_size FROM settings WHERE id = 1')
+  const result = db.exec('SELECT layout, accent, show_quick_note, font_size, notifications_enabled FROM settings WHERE id = 1')
   if (result.length === 0) {
-    return { layout: 'focus', accent: '#5B7CF6', show_quick_note: 1, font_size: 13 }
+    return { layout: 'focus', accent: '#5B7CF6', show_quick_note: 1, font_size: 13, notifications_enabled: 1 }
   }
   const row = result[0].values[0]
   return {
     layout: row[0] as string,
     accent: row[1] as string,
     show_quick_note: row[2] as number,
-    font_size: row[3] as number
+    font_size: row[3] as number,
+    notifications_enabled: row[4] as number
   }
 }
 
@@ -166,6 +175,7 @@ export function updateSettings(fields: Partial<SettingsRow>): SettingsRow {
   if (fields.accent !== undefined) { sets.push('accent = ?'); values.push(fields.accent) }
   if (fields.show_quick_note !== undefined) { sets.push('show_quick_note = ?'); values.push(fields.show_quick_note) }
   if (fields.font_size !== undefined) { sets.push('font_size = ?'); values.push(fields.font_size) }
+  if (fields.notifications_enabled !== undefined) { sets.push('notifications_enabled = ?'); values.push(fields.notifications_enabled) }
 
   if (sets.length > 0) {
     db.run(`UPDATE settings SET ${sets.join(', ')} WHERE id = 1`, values)

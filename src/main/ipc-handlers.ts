@@ -42,7 +42,8 @@ export function registerIpcHandlers(): void {
       layout: row.layout,
       accent: row.accent,
       showQuickNote: row.show_quick_note === 1,
-      fontSize: row.font_size
+      fontSize: row.font_size,
+      notificationsEnabled: row.notifications_enabled === 1
     }
   })
 
@@ -52,13 +53,15 @@ export function registerIpcHandlers(): void {
     if (settings.accent !== undefined) mapped.accent = settings.accent
     if (settings.showQuickNote !== undefined) mapped.show_quick_note = settings.showQuickNote ? 1 : 0
     if (settings.fontSize !== undefined) mapped.font_size = settings.fontSize
+    if (settings.notificationsEnabled !== undefined) mapped.notifications_enabled = settings.notificationsEnabled ? 1 : 0
 
     const row = updateSettings(mapped)
     return {
       layout: row.layout,
       accent: row.accent,
       showQuickNote: row.show_quick_note === 1,
-      fontSize: row.font_size
+      fontSize: row.font_size,
+      notificationsEnabled: row.notifications_enabled === 1
     }
   })
 

@@ -14,6 +14,7 @@ export interface Settings {
   accent: string
   showQuickNote: boolean
   fontSize: number
+  notificationsEnabled: boolean
 }
 
 const api = {

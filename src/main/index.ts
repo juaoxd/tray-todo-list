@@ -3,6 +3,7 @@ import { initDatabase } from './database'
 import { createTray } from './tray'
 import { createPopup } from './window'
 import { registerIpcHandlers } from './ipc-handlers'
+import { startNotificationScheduler } from './notifications'
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
@@ -19,6 +20,7 @@ app.whenReady().then(async () => {
   registerIpcHandlers()
   createPopup()
   createTray()
+  startNotificationScheduler()
 })
 
 // Keep app running when all windows are closed (tray app behavior)
