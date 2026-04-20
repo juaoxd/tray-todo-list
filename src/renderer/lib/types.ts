@@ -31,6 +31,8 @@ export interface ElectronAPI {
   }
   window: {
     hide(): Promise<void>
+    resize(height: number): Promise<void>
+    onShowSettings(cb: () => void): () => void
   }
 }
 

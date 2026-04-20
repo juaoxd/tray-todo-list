@@ -1,6 +1,6 @@
 import { Tray, nativeImage, Menu, app } from 'electron'
 import { join } from 'path'
-import { togglePopup } from './window'
+import { togglePopup, showSettings } from './window'
 
 let tray: Tray | null = null
 
@@ -21,6 +21,8 @@ export function createTray(): Tray {
 
   tray.on('right-click', () => {
     const contextMenu = Menu.buildFromTemplate([
+      { label: 'Configurações', click: () => tray && showSettings(tray.getBounds()) },
+      { type: 'separator' },
       { label: 'Fechar', click: () => app.quit() }
     ])
     tray?.popUpContextMenu(contextMenu)

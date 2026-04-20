@@ -9,7 +9,7 @@ import {
   getSettings,
   updateSettings
 } from './database'
-import { getPopup } from './window'
+import { getPopup, setPopupHeight } from './window'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('tasks:list', () => {
@@ -64,5 +64,9 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window:hide', () => {
     getPopup()?.hide()
+  })
+
+  ipcMain.handle('window:resize', (_event, { height }: { height: number }) => {
+    setPopupHeight(Math.ceil(height))
   })
 }

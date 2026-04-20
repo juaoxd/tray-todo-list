@@ -32,7 +32,13 @@ const api = {
     update: (settings: Partial<Settings>): Promise<Settings> => ipcRenderer.invoke('settings:update', settings)
   },
   window: {
-    hide: (): Promise<void> => ipcRenderer.invoke('window:hide')
+    hide: (): Promise<void> => ipcRenderer.invoke('window:hide'),
+    resize: (height: number): Promise<void> => ipcRenderer.invoke('window:resize', { height }),
+    onShowSettings: (cb: () => void): (() => void) => {
+      const handler = () => cb()
+      ipcRenderer.on('show-settings', handler)
+      return () => ipcRenderer.removeListener('show-settings', handler)
+    }
   }
 }
 

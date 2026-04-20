@@ -3,7 +3,11 @@ import { Settings } from '../lib/types'
 
 const ACCENTS = ['#5B7CF6', '#E05D5D', '#2DAE74', '#E07A2A', '#9B5CE5', '#D4954A']
 
-export function TweaksPanel() {
+interface TweaksPanelProps {
+  onClose?: () => void
+}
+
+export function TweaksPanel({ onClose }: TweaksPanelProps) {
   const { settings, updateSettings } = useApp()
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => {
@@ -18,13 +22,29 @@ export function TweaksPanel() {
       fontFamily: "'DM Sans', sans-serif",
       fontSize: 13,
     }}>
-      <h3 style={{
-        fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
-        textTransform: 'uppercase', color: 'oklch(0.55 0.01 250)',
-        marginBottom: 12,
-      }}>
-        Tweaks
-      </h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h3 style={{
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+          textTransform: 'uppercase', color: 'oklch(0.55 0.01 250)',
+        }}>
+          Configurações
+        </h3>
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 11, color: 'oklch(0.60 0.01 250)',
+              fontFamily: "'DM Sans', sans-serif",
+              padding: '2px 6px',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = settings.accent}
+            onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.60 0.01 250)'}
+          >
+            ← Voltar
+          </button>
+        )}
+      </div>
 
       {/* Layout */}
       <div style={{ marginBottom: 10 }}>

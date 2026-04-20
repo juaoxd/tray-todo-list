@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { useApp } from './context/AppContext'
 import { LayoutCompact } from './components/layouts/LayoutCompact'
 import { LayoutCalendar } from './components/layouts/LayoutCalendar'
@@ -7,10 +7,46 @@ import { TweaksPanel } from './components/TweaksPanel'
 
 function AppContent() {
   const { settings, loading } = useApp()
-  const [tweaksOpen, setTweaksOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Resize window to match content height
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      if (containerRef.current) {
+        window.api.window.resize(containerRef.current.offsetHeight)
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Listen for "show-settings" from tray right-click
+  useEffect(() => {
+    return window.api.window.onShowSettings(() => setSettingsOpen(true))
+  }, [])
+
+  // Reset settings panel when popup is hidden
+  useEffect(() => {
+    const onVisibility = () => { if (document.hidden) setSettingsOpen(false) }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   if (loading) {
-    return <div style={{ padding: 20, textAlign: 'center', color: 'oklch(0.6 0.01 250)', fontSize: 12 }}>Carregando...</div>
+    return (
+      <div ref={containerRef} style={{ padding: '0 0 8px' }}>
+        <div style={{
+          background: 'white', borderRadius: 12,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          padding: 20, textAlign: 'center', color: 'oklch(0.6 0.01 250)', fontSize: 12,
+        }}>
+          Carregando...
+        </div>
+      </div>
+    )
   }
 
   const layouts = {
@@ -21,35 +57,19 @@ function AppContent() {
   const Layout = layouts[settings.layout] || LayoutCompact
 
   return (
-    <div style={{
-      width: 330,
-      background: 'white',
-      borderRadius: 12,
-      overflow: 'hidden',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-    }}>
-      <Layout />
-      {/* Settings toggle */}
+    <div ref={containerRef} style={{ padding: '0 0 8px' }}>
       <div style={{
-        borderTop: '1px solid oklch(0.92 0.01 250)',
-        padding: '6px 14px',
-        display: 'flex', justifyContent: 'flex-end',
+        width: 330,
+        background: 'white',
+        borderRadius: 12,
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
       }}>
-        <button
-          onClick={() => setTweaksOpen(o => !o)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: 'oklch(0.60 0.01 250)',
-            fontFamily: "'DM Sans', sans-serif",
-            transition: 'color 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = settings.accent}
-          onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.60 0.01 250)'}
-        >
-          ⚙ Tweaks
-        </button>
+        {settingsOpen
+          ? <TweaksPanel onClose={() => setSettingsOpen(false)} />
+          : <Layout />
+        }
       </div>
-      {tweaksOpen && <TweaksPanel />}
     </div>
   )
 }
